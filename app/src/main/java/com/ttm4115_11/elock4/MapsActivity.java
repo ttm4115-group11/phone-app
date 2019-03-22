@@ -9,7 +9,16 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.os.Bundle;
+import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+
+
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -20,6 +29,10 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -50,6 +63,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
     }
 
     /**
@@ -64,9 +78,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "Map is ready");
         mMap = googleMap;
-
+       // Toast.makeText(this, "Map is ready", Toast.LENGTH_SHORT).show();
 
         // Add a marker in Trondheim and move the camera
+        getMarkersFromServer();
         LatLng tTown = new LatLng(63.446827, 10.421906);
         mMap.addMarker(new MarkerOptions().position(tTown).title("Marker in Trondheim"));
 
@@ -139,4 +154,61 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
     }
+
+    private void addMarkers(JSONArray res) {
+        Log.d(TAG,"Got " + res.length() + " markers");
+
+
+        // Populate map
+        for (int i = 0; i < res.length(); i++) {
+            try {
+                LatLng current = new LatLng(
+                        (float) res.getJSONObject(i).getDouble("latitude"),
+                        (float) res.getJSONObject(i).getDouble("longitude")
+                );
+                Log.d(TAG, "Hello");
+                mMap.addMarker(new MarkerOptions().position(current).title(res.getJSONObject(i).getString("location")));
+
+            } catch (JSONException error) {
+                Log.e(TAG, "addMarkers: error: " + error);
+            }
+        }
+    }
+
+    private void getMarkersFromServer() {
+        //
+        String url = "INSERT URL HERE";
+        Log.d(TAG, "serverMarkers: Getting data");
+        RequestQueue queue = Volley.newRequestQueue(this);
+
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(TAG,"serverMarkers: Data received: " + response.toString());
+                        Toast.makeText(MapsActivity.this.getApplicationContext(), "Markers found", Toast.LENGTH_SHORT).show();
+
+                        try {
+                            JSONArray r = response.getJSONArray("racks");
+                            addMarkers(r);
+                        } catch (JSONException error) {
+                            Log.e(TAG, "serverMarkers: JSON error" + error);
+                        }
+                        // Call addMarkers
+
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "serverMarkers: Error, data not received: " + error);
+                        Toast.makeText(MapsActivity.this.getApplicationContext(), "No markers", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+        queue.add(jsonObjectRequest);
+    }
+
 }
