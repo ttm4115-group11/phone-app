@@ -34,6 +34,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import javax.crypto.Mac;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MapActivity";
@@ -166,9 +168,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         (float) res.getJSONObject(i).getDouble("latitude"),
                         (float) res.getJSONObject(i).getDouble("longitude")
                 );
-                Log.d(TAG, "Hello");
-                mMap.addMarker(new MarkerOptions().position(current).title(res.getJSONObject(i).getString("location")));
-
+                mMap.addMarker(new MarkerOptions()
+                        .position(current)
+                        .title(res.getJSONObject(i).getString("location"))
+                        .snippet(res.getJSONObject(i).getString("available_spots") + "/" + res.getJSONObject(i).getString("parkingspots")));
+                Log.d(TAG, res.getJSONObject(i).getString("available_spots") + "/" + res.getJSONObject(i).getString("parkingspots"));
+                mMap.setInfoWindowAdapter(new CustomWindowInfoAdapter(MapsActivity.this));
             } catch (JSONException error) {
                 Log.e(TAG, "addMarkers: error: " + error);
             }
@@ -177,7 +182,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void getMarkersFromServer() {
         //
-        String url = "INSERT URL HERE";
+        String url = "http://10.24.34.250:5000/";
         Log.d(TAG, "serverMarkers: Getting data");
         RequestQueue queue = Volley.newRequestQueue(this);
 
@@ -195,9 +200,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             addMarkers(r);
                         } catch (JSONException error) {
                             Log.e(TAG, "serverMarkers: JSON error" + error);
+                            // TODO: Make a testfunction that generates map markers for testing
                         }
-                        // Call addMarkers
-
                     }
                 }, new Response.ErrorListener() {
 
