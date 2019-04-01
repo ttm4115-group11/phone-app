@@ -9,6 +9,8 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.android.volley.Request;
@@ -49,6 +51,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean mLocationPermissionsGranted = false;
     private FusedLocationProviderClient mFusedLocationProviderClient;
 
+    //Buttons
+    private Button reserveButton;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +62,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
         getLocationPermission();
 
+        this.reserveButton = findViewById(R.id.reserve_button);
+        this.reserveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "Button clicked!");
+            }
+        });
 
     }
 
@@ -182,7 +195,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void getMarkersFromServer() {
         //
-        String url = "http://10.24.34.250:5000/";
+        String url = "http://10.24.33.219:5000/";
         Log.d(TAG, "serverMarkers: Getting data");
         RequestQueue queue = Volley.newRequestQueue(this);
 
@@ -214,5 +227,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         queue.add(jsonObjectRequest);
     }
+
 
 }
