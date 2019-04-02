@@ -9,22 +9,46 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+
+
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.ttm4115_11.elock4.RequestQueueSingleton;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener {
 
     private static final String TAG = "MapActivity";
     private static final float DEFAULT_ZOOM = 15f;
+    private static final String URL = "http://167.99.217.172:5000/";
+
     private GoogleMap mMap;
 
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
@@ -34,12 +58,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean mLocationPermissionsGranted = false;
     private FusedLocationProviderClient mFusedLocationProviderClient;
 
+    //Buttons
+    private Button reserveButton;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         getLocationPermission();
+
 
 
     }
@@ -50,6 +79,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
     }
 
     /**
@@ -61,14 +91,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * installed Google Play services and returned to the app.
      */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady (GoogleMap googleMap) {
         Log.d(TAG, "Map is ready");
         mMap = googleMap;
-
+       // Toast.makeText(this, "Map is ready", Toast.LENGTH_SHORT).show();
 
         // Add a marker in Trondheim and move the camera
+        getMarkersFromServer();
+
         LatLng tTown = new LatLng(63.446827, 10.421906);
         mMap.addMarker(new MarkerOptions().position(tTown).title("Marker in Trondheim"));
+
+        mMap.setOnInfoWindowClickListener(this);
 
         if (mLocationPermissionsGranted) {
             getDeviceLocation();
@@ -137,6 +171,108 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }else{
             ActivityCompat.requestPermissions(this, permissions, LOCATION_PERMISSION_REQUEST_CODE);
         }
+
+    }
+
+    private void addMarkers(JSONArray res) {
+        Log.d(TAG,"Got " + res.length() + " markers");
+
+
+        // Populate map
+        for (int i = 0; i < res.length(); i++) {
+            try {
+                LatLng current = new LatLng(
+                        (float) res.getJSONObject(i).getDouble("latitude"),
+                        (float) res.getJSONObject(i).getDouble("longitude")
+                );
+                mMap.addMarker(new MarkerOptions()
+                        .position(current)
+                        .title(res.getJSONObject(i).getString("location"))
+                        .snippet(res.getJSONObject(i).getString("available_spots") + "/" + res.getJSONObject(i).getString("parkingspots")));
+                Log.d(TAG, res.getJSONObject(i).getString("available_spots") + "/" + res.getJSONObject(i).getString("parkingspots"));
+                mMap.setInfoWindowAdapter(new CustomWindowInfoAdapter(MapsActivity.this));
+            } catch (JSONException error) {
+                Log.e(TAG, "addMarkers: error: " + error);
+            }
+        }
+    }
+
+    private void getMarkersFromServer() {
+        //
+        Log.d(TAG, "serverMarkers: Getting data");
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.GET, URL, null, new Response.Listener<JSONObject>() {
+
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(TAG,"serverMarkers: Data received: " + response.toString());
+                        Toast.makeText(MapsActivity.this.getApplicationContext(), "Markers found", Toast.LENGTH_SHORT).show();
+
+                        try {
+                            JSONArray r = response.getJSONArray("racks");
+                            addMarkers(r);
+                        } catch (JSONException error) {
+                            Log.e(TAG, "serverMarkers: JSON error" + error);
+                            // TODO: Make a testfunction that generates map markers for testing
+                        }
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "serverMarkers: Error, data not received: " + error);
+                        Toast.makeText(MapsActivity.this.getApplicationContext(), "No markers", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+        RequestQueueSingleton.getInstance(this).addToRequestQueue(jsonObjectRequest);
+    }
+
+
+    @Override
+    public void onInfoWindowClick(Marker marker) {
+        //Log.d(TAG, "onInfoWindowClick: Marker with ID" + marker.getId());
+        Toast.makeText(this, marker.getTitle() + " clicked!", Toast.LENGTH_SHORT).show();
+        reserveSpot(marker);
+
+    }
+
+    private void reserveSpot(Marker marker) {
+        String markerId = marker.getId().substring(1);
+        Log.d(TAG, "reserveSpot: " + markerId);
+
+        StringRequest putRequest = new StringRequest(Request.Method.PUT, URL+"reserve/"+markerId,
+                new Response.Listener<String>()
+                {
+                    @Override
+                    public void onResponse(String response) {
+                        Log.d(TAG, "reserveSpot: PUT: response: " + response);
+                    }
+                },
+                new Response.ErrorListener()
+                {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.d(TAG, "reserveSpot: PUT: error: " + error);
+                    }
+                }
+        ) {
+
+            @Override
+            protected Map<String, String> getParams()
+            {
+                Map<String, String>  params = new HashMap<String, String>();
+                params.put("nfc", "412usajdas7asd");
+                params.put("id", "12345678");
+                params.put("buffer", "3600");
+
+                return params;
+            }
+
+        };
+        Log.d(TAG,"Payload sent: " + putRequest.getBodyContentType());
+        RequestQueueSingleton.getInstance(this).addToRequestQueue(putRequest);
 
     }
 }
