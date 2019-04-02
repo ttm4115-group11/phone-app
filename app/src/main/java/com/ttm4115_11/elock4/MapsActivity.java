@@ -27,6 +27,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -36,9 +37,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import javax.crypto.Mac;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener {
 
     private static final String TAG = "MapActivity";
     private static final float DEFAULT_ZOOM = 15f;
@@ -62,13 +62,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
         getLocationPermission();
 
-        this.reserveButton = findViewById(R.id.reserve_button);
-        this.reserveButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "Button clicked!");
-            }
-        });
+
 
     }
 
@@ -90,15 +84,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * installed Google Play services and returned to the app.
      */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady (GoogleMap googleMap) {
         Log.d(TAG, "Map is ready");
         mMap = googleMap;
        // Toast.makeText(this, "Map is ready", Toast.LENGTH_SHORT).show();
 
         // Add a marker in Trondheim and move the camera
         getMarkersFromServer();
+
         LatLng tTown = new LatLng(63.446827, 10.421906);
         mMap.addMarker(new MarkerOptions().position(tTown).title("Marker in Trondheim"));
+
+        mMap.setOnInfoWindowClickListener(this);
 
         if (mLocationPermissionsGranted) {
             getDeviceLocation();
@@ -195,7 +192,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void getMarkersFromServer() {
         //
-        String url = "http://10.24.33.219:5000/";
+        String url = "http://167.99.217.172:5000/";
         Log.d(TAG, "serverMarkers: Getting data");
         RequestQueue queue = Volley.newRequestQueue(this);
 
@@ -229,4 +226,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
+    @Override
+    public void onInfoWindowClick(Marker marker) {
+        Log.d(TAG, "onInfoWindowClick: Marker with ID" + marker.getId());
+        Toast.makeText(this, marker.getTitle() + " clicked!", Toast.LENGTH_SHORT).show();
+    }
 }
