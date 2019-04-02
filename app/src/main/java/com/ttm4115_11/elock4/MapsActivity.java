@@ -20,6 +20,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 
 
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -231,7 +232,47 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onInfoWindowClick(Marker marker) {
-        Log.d(TAG, "onInfoWindowClick: Marker with ID" + marker.getId());
+        //Log.d(TAG, "onInfoWindowClick: Marker with ID" + marker.getId());
         Toast.makeText(this, marker.getTitle() + " clicked!", Toast.LENGTH_SHORT).show();
+        reserveSpot(marker);
+
+    }
+
+    private void reserveSpot(Marker marker) {
+        String markerId = marker.getId().substring(1);
+        Log.d(TAG, "reserveSpot: " + markerId);
+
+        StringRequest putRequest = new StringRequest(Request.Method.PUT, URL+"reserve/"+markerId,
+                new Response.Listener<String>()
+                {
+                    @Override
+                    public void onResponse(String response) {
+                        Log.d(TAG, "reserveSpot: PUT: response: " + response);
+                    }
+                },
+                new Response.ErrorListener()
+                {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.d(TAG, "reserveSpot: PUT: error: " + error);
+                    }
+                }
+        ) {
+
+            @Override
+            protected Map<String, String> getParams()
+            {
+                Map<String, String>  params = new HashMap<String, String>();
+                params.put("nfc", "412usajdas7asd");
+                params.put("id", "12345678");
+                params.put("buffer", "3600");
+
+                return params;
+            }
+
+        };
+        Log.d(TAG,"Payload sent: " + putRequest.getBodyContentType());
+        RequestQueueSingleton.getInstance(this).addToRequestQueue(putRequest);
+
     }
 }
