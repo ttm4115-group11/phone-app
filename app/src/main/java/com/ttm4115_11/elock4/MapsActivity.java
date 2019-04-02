@@ -37,11 +37,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.ttm4115_11.elock4.RequestQueueSingleton;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener {
 
     private static final String TAG = "MapActivity";
     private static final float DEFAULT_ZOOM = 15f;
+    private static final String URL = "http://167.99.217.172:5000/";
+
     private GoogleMap mMap;
 
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
@@ -192,13 +198,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void getMarkersFromServer() {
         //
-        String url = "http://167.99.217.172:5000/";
         Log.d(TAG, "serverMarkers: Getting data");
-        RequestQueue queue = Volley.newRequestQueue(this);
-
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
-                (Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+                (Request.Method.GET, URL, null, new Response.Listener<JSONObject>() {
 
                     @Override
                     public void onResponse(JSONObject response) {
@@ -222,7 +225,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 });
 
-        queue.add(jsonObjectRequest);
+        RequestQueueSingleton.getInstance(this).addToRequestQueue(jsonObjectRequest);
     }
 
 
