@@ -263,9 +263,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             protected Map<String, String> getParams()
             {
                 Map<String, String>  params = new HashMap<String, String>();
-                params.put("nfc", "412usajdas7asd");
-                params.put("id", "12345678");
-                params.put("buffer", "3600");
+                params.put("value", "5A8A5781");
+                params.put("rack_id", "en");
+                params.put("res_id", "opium_"+System.currentTimeMillis()/1000);
+                params.put("offset", "3600");
 
                 return params;
             }
